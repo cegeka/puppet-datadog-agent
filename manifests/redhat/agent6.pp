@@ -4,8 +4,8 @@
 #
 
 class datadog_agent::redhat::agent6(
-  $baseurl = "https://yum.datadoghq.com/beta/${::architecture}/",
-  $gpgkey = 'https://yum.datadoghq.com/DATADOG_RPM_KEY_E09422B3.public',
+  $baseurl = "https://yum.datadoghq.com/stable/6/${::architecture}/",
+  $gpgkey = 'https://yum.datadoghq.com/DATADOG_RPM_KEY.public https://yum.datadoghq.com/DATADOG_RPM_KEY_E09422B3.public',
   $manage_repo = true,
   $agent_version = 'latest'
 ) inherits datadog_agent::params {
@@ -19,7 +19,7 @@ class datadog_agent::redhat::agent6(
     yumrepo {'datadog':
       enabled  => 1,
       gpgcheck => 1,
-      gpgkey   => 'https://yum.datadoghq.com/DATADOG_RPM_KEY.public https://yum.datadoghq.com/DATADOG_RPM_KEY_E09422B3.public',
+      gpgkey   => $gpgkey,
       descr    => 'Datadog, Inc.',
       baseurl  => $baseurl
     }
@@ -36,12 +36,17 @@ class datadog_agent::redhat::agent6(
     ensure  => $agent_version,
   }
 
+  case $::operatingsystemmajrelease {
+    '6': { $service_provider = 'upstart' }
+    default: { $service_provider = 'redhat' }
+  }
+
   service { $datadog_agent::params::service_name:
     ensure    => $::datadog_agent::service_ensure,
     enable    => $::datadog_agent::service_enable,
     hasstatus => false,
     pattern   => 'dd-agent',
-    provider  => 'redhat',
+    provider  => $service_provider,
     require   => Package[$datadog_agent::params::package_name],
   }
 
