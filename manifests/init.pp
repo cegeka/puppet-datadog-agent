@@ -341,13 +341,13 @@ class datadog_agent(
   validate_bool($process_agent_enabled)
 
   if $hiera_tags {
-    $local_tags = hiera_array('datadog_agent::tags', [])
+    $local_tags = lookup({ 'name' => 'datadog_agent::tags', 'default_value' => [] , merge => unique })
   } else {
     $local_tags = $tags
   }
 
   if $hiera_integrations {
-    $local_integrations = hiera_hash('datadog_agent::integrations', {})
+    $local_integrations = lookup({ 'name' => 'datadog_agent::integrations', 'default_value' => {} , merge => hash })
   } else {
     $local_integrations = $integrations
   }
