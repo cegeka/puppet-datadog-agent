@@ -44,29 +44,40 @@
 #  }
 #
 class datadog_agent::integrations::pgbouncer(
-  $password = '',
-  $host   = 'localhost',
-  $port   = '6432',
-  $username = 'datadog',
-  $tags = [],
-  $pgbouncers = [],
+  String $password               = '',
+  String $host                   = 'localhost',
+  Variant[String, Integer] $port = '6432',
+  String $username               = 'datadog',
+  Array $tags = [],
+  Array $pgbouncers = [],
 ) inherits datadog_agent::params {
   include datadog_agent
 
-  validate_array($tags)
-  validate_array($pgbouncers)
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/pgbouncer.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/pgbouncer.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/pgbouncer.yaml"
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/pgbouncer.yaml"
+    $dst = $legacy_dst
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0600',
+    mode    => $datadog_agent::params::permissions_protected_file,
     content => template('datadog_agent/agent-conf.d/pgbouncer.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name],

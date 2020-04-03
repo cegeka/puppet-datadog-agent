@@ -19,18 +19,29 @@
 #   }
 #
 class datadog_agent::integrations::riak(
-  $url   = 'http://localhost:8098/stats',
-  $tags  = [],
+  String $url  = 'http://localhost:8098/stats',
+  Array $tags  = [],
 ) inherits datadog_agent::params {
   include datadog_agent
 
-  validate_string($url)
-  validate_array($tags)
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/riak.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/riak.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/riak.yaml"
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/riak.yaml"
+    $dst = $legacy_dst
   }
 
   file {
@@ -38,7 +49,7 @@ class datadog_agent::integrations::riak(
       ensure  => file,
       owner   => $datadog_agent::params::dd_user,
       group   => $datadog_agent::params::dd_group,
-      mode    => '0644',
+      mode    => $datadog_agent::params::permissions_file,
       content => template('datadog_agent/agent-conf.d/riak.yaml.erb'),
       require => Package[$datadog_agent::params::package_name],
       notify  => Service[$datadog_agent::params::service_name]

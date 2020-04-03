@@ -1,5 +1,5 @@
 # Allow custom tags via a define
-define datadog_agent::tag(
+define datadog_agent::tag5(
   $tag_name = $name,
   $lookup_fact = false,
 ){
@@ -9,7 +9,7 @@ define datadog_agent::tag(
 
     if is_array($value){
       $tags = prefix($value, "${tag_name}:")
-      datadog_agent::tag{$tags: }
+      datadog_agent::tag5{$tags: }
     } else {
       if $value {
         concat::fragment{ "datadog tag ${tag_name}:${value}":

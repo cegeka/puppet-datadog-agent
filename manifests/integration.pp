@@ -1,30 +1,32 @@
 define datadog_agent::integration (
-  $instances,
-  $init_config = undef,
-  $integration = $title,
+  Array $instances,
+  Optional[Hash] $init_config = undef,
+  Optional[Array] $logs       = undef,
+  String $integration         = $title,
 ){
 
   include datadog_agent
 
-  validate_array($instances)
-  if $init_config != undef {
-    validate_hash($init_config)
-  }
-  validate_string($integration)
-
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/${integration}.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst = "${datadog_agent::params::conf_dir}/${integration}.d/conf.yaml"
+    file { "${datadog_agent::params::conf_dir}/${integration}.d":
+      ensure => directory,
+      owner  => $datadog_agent::dd_user,
+      group  => $datadog_agent::dd_group,
+      mode   => $datadog_agent::params::permissions_directory,
+      before => File[$dst]
+    }
   } else {
-    $dst = "${datadog_agent::conf_dir}/${integration}.yaml"
+    $dst = "${datadog_agent::params::legacy_conf_dir}/${integration}.yaml"
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::dd_user,
     group   => $datadog_agent::dd_group,
-    mode    => '0600',
-    content => to_instances_yaml($init_config, $instances),
-    notify  => Service[$datadog_agent::service_name]
+    mode    => $datadog_agent::params::permissions_file,
+    content => to_instances_yaml($init_config, $instances, $logs),
+    notify  => Service[$datadog_agent::params::service_name]
   }
 
 }

@@ -1,41 +1,36 @@
 require 'spec_helper'
 
 describe 'datadog_agent::integrations::ssh' do
-  context 'supported agents - v5 and v6' do
-    agents = { '5' => false, '6' => true }
-    agents.each do |_, enabled|
-      let(:pre_condition) { "class {'::datadog_agent': agent6_enable => #{enabled}}" }
-      let(:facts) {{
-        operatingsystem: 'Ubuntu',
-      }}
-      if !enabled
-        let(:conf_dir) { '/etc/dd-agent/conf.d' }
+  context 'supported agents' do
+    ALL_SUPPORTED_AGENTS.each do |agent_major_version|
+      let(:pre_condition) { "class {'::datadog_agent': agent_major_version => #{agent_major_version}}" }
+
+      if agent_major_version == 5
+        let(:conf_file) { '/etc/dd-agent/conf.d/ssh.yaml' }
       else
-        let(:conf_dir) { '/etc/datadog-agent/conf.d' }
+        let(:conf_file) { "#{CONF_DIR}/ssh_check.d/conf.yaml" }
       end
-      let(:dd_user) { 'dd-agent' }
-      let(:dd_group) { 'root' }
-      let(:dd_package) { 'datadog-agent' }
-      let(:dd_service) { 'datadog-agent' }
-      let(:conf_file) { "#{conf_dir}/ssh.yaml" }
 
       context 'with default parameters' do
-        it { should compile }
+        it { is_expected.to compile }
       end
 
       context 'with parameters set' do
-        let(:params) {{
-          host: 'localhost',
-          port:  222,
-          username: 'foo',
-          password: 'bar',
-          sftp_check: false,
-        }}
-        it { should contain_file(conf_file).with_content(/host: localhost/) }
-        it { should contain_file(conf_file).with_content(/port: 222/) }
-        it { should contain_file(conf_file).with_content(/username: foo/) }
-        it { should contain_file(conf_file).with_content(/password: bar/) }
-        it { should contain_file(conf_file).without_content(/private_key_file:/) }
+        let(:params) do
+          {
+            host: 'localhost',
+            port:  222,
+            username: 'foo',
+            password: 'bar',
+            sftp_check: false,
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{host: localhost}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{port: 222}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{username: foo}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{password: bar}) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{private_key_file:}) }
       end
     end
   end

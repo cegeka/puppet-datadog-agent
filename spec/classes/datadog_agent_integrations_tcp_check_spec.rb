@@ -1,103 +1,108 @@
 require 'spec_helper'
 
 describe 'datadog_agent::integrations::tcp_check' do
-  context 'supported agents - v5 and v6' do
-    agents = { '5' => false, '6' => true }
-    agents.each do |_, enabled|
-      let(:pre_condition) { "class {'::datadog_agent': agent6_enable => #{enabled}}" }
-      let(:facts) {{
-        operatingsystem: 'Ubuntu',
-      }}
-      if !enabled
-        let(:conf_dir) { '/etc/dd-agent/conf.d' }
-      else
-        let(:conf_dir) { '/etc/datadog-agent/conf.d' }
-      end
-      let(:dd_user) { 'dd-agent' }
-      let(:dd_group) { 'root' }
-      let(:dd_package) { 'datadog-agent' }
-      let(:dd_service) { 'datadog-agent' }
-      let(:conf_file) { "#{conf_dir}/tcp_check.yaml" }
+  context 'supported agents' do
+    ALL_SUPPORTED_AGENTS.each do |agent_major_version|
+      let(:pre_condition) { "class {'::datadog_agent': agent_major_version => #{agent_major_version}}" }
 
-      it { should compile.with_all_deps }
-      it { should contain_file(conf_file).with(
-        owner: dd_user,
-        group: dd_group,
-        mode: '0600',
-      )}
-      it { should contain_file(conf_file).that_requires("Package[#{dd_package}]") }
-      it { should contain_file(conf_file).that_notifies("Service[#{dd_service}]") }
+      if agent_major_version == 5
+        let(:conf_file) { '/etc/dd-agent/conf.d/tcp_check.yaml' }
+      else
+        let(:conf_file) { "#{CONF_DIR}/tcp_check.d/conf.yaml" }
+      end
+
+      it { is_expected.to compile.with_all_deps }
+      it {
+        is_expected.to contain_file(conf_file).with(
+          owner: DD_USER,
+          group: DD_GROUP,
+          mode: PERMISSIONS_PROTECTED_FILE,
+        )
+      }
+      it { is_expected.to contain_file(conf_file).that_requires("Package[#{PACKAGE_NAME}]") }
+      it { is_expected.to contain_file(conf_file).that_notifies("Service[#{SERVICE_NAME}]") }
 
       context 'with default parameters' do
-        it { should contain_file(conf_file).without_content(%r{name: }) }
-        it { should contain_file(conf_file).without_content(%r{host: }) }
-        it { should contain_file(conf_file).without_content(%r{port: }) }
-        it { should contain_file(conf_file).without_content(%r{timeout: 1}) }
-        it { should contain_file(conf_file).without_content(%{threshold: }) }
-        it { should contain_file(conf_file).without_content(%r{window: }) }
-        it { should contain_file(conf_file).without_content(%r{collect_response_time: }) }
-        it { should contain_file(conf_file).without_content(%r{skip_event: }) }
-        it { should contain_file(conf_file).without_content(%r{tags: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{name: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{host: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{port: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{timeout: 1}) }
+        it { is_expected.to contain_file(conf_file).without_content(%(threshold: )) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{window: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{collect_response_time: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{skip_event: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{tags: }) }
       end
 
       context 'with parameters set' do
-        let(:params) {{
-          check_name: 'foo.bar.baz',
-          host: 'foo.bar.baz',
-          port: '80',
-          timeout: 123,
-          threshold: 456,
-          window: 789,
-          collect_response_time: true,
-          skip_event: true,
-        }}
+        let(:params) do
+          {
+            check_name: 'foo.bar.baz',
+            host: 'foo.bar.baz',
+            port: '80',
+            timeout: 123,
+            threshold: 456,
+            window: 789,
+            collect_response_time: true,
+            skip_event: true,
+          }
+        end
 
-        it { should contain_file(conf_file).with_content(%r{name: foo.bar.baz}) }
-        it { should contain_file(conf_file).with_content(%r{host: foo.bar.baz}) }
-        it { should contain_file(conf_file).with_content(%r{port: 80}) }
-        it { should contain_file(conf_file).with_content(%r{timeout: 123}) }
-        it { should contain_file(conf_file).with_content(%r{threshold: 456}) }
-        it { should contain_file(conf_file).with_content(%r{window: 789}) }
-        it { should contain_file(conf_file).with_content(%r{collect_response_time: true}) }
-        it { should contain_file(conf_file).with_content(%r{skip_event: true}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{name: foo.bar.baz}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{host: foo.bar.baz}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{port: 80}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{timeout: 123}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{threshold: 456}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{window: 789}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{collect_response_time: true}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{skip_event: true}) }
       end
 
       context 'with tags parameter array' do
-        let(:params) {{
-          check_name: 'foo.bar.baz',
-          host: 'foo.bar.baz',
-          port: '80',
-          tags: [ 'foo', 'bar', 'baz' ],
-        }}
-        it { should contain_file(conf_file).with_content(/tags:\s+- foo\s+- bar\s+- baz\s*?[^-]/m) }
+        let(:params) do
+          {
+            check_name: 'foo.bar.baz',
+            host: 'foo.bar.baz',
+            port: '80',
+            tags: ['foo', 'bar', 'baz'],
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{tags:\s+- foo\s+- bar\s+- baz\s*?[^-]}m) }
       end
 
       context 'with tags parameter empty values' do
         context 'mixed in with other tags' do
-          let(:params) {{
-            check_name: 'foo.bar.baz',
-            host: 'foo.bar.baz',
-            port: '80',
-            tags: [ 'foo', '', 'baz' ]
-          }}
+          let(:params) do
+            {
+              check_name: 'foo.bar.baz',
+              host: 'foo.bar.baz',
+              port: '80',
+              tags: ['foo', '', 'baz'],
+            }
+          end
 
-          it { should contain_file(conf_file).with_content(/tags:\s+- foo\s+- baz\s*?[^-]/m) }
+          it { is_expected.to contain_file(conf_file).with_content(%r{tags:\s+- foo\s+- baz\s*?[^-]}m) }
         end
 
         context 'single element array of an empty string' do
-          let(:params) {{
-            tags: [''],
-          }}
+          let(:params) do
+            {
+              tags: [''],
+            }
+          end
 
-          skip("undefined behavior")
+          skip('undefined behavior')
         end
 
         context 'single value empty string' do
-          let(:params) {{
-            tags: '',
-          }}
+          let(:params) do
+            {
+              tags: '',
+            }
+          end
 
-          skip("doubly undefined behavior")
+          skip('doubly undefined behavior')
         end
       end
     end

@@ -27,6 +27,8 @@
 #       schema size metrics
 #   $disable_innodb_metrics
 #       disable innodb metrics, used with older versions of MySQL without innodb engine support.
+#   $queries
+#       Custom metrics based on MySQL query
 # Sample Usage:
 #
 #  class { 'datadog_agent::integrations::mysql' :
@@ -47,31 +49,44 @@
 #      extra_status_metrics      => 'true',
 #      extra_innodb_metrics      => 'true',
 #      extra_performance_metrics => 'true',
-#      schema_size_metrics       => 'true', 
+#      schema_size_metrics       => 'true',
 #      disable_innodb_metrics    => 'false',
+#      queries                   => [
+#        {
+#          query  => 'SELECT TIMESTAMPDIFF(second,MAX(create_time),NOW()) as last_accessed FROM requests',
+#          metric => 'app.seconds_since_last_request',
+#          type   => 'gauge',
+#          field  => 'last_accessed',
+#        },
+#      ],
 #    }
 #  }
 #
 #
 class datadog_agent::integrations::mysql(
-  $password,
-  $host = 'localhost',
-  $user = 'datadog',
-  $port = 3306,
-  $sock = undef,
-  $tags = [],
-  $replication = '0',
-  $galera_cluster = '0',
-  $extra_status_metrics = false,
-  $extra_innodb_metrics = false,
-  $extra_performance_metrics = false,
-  $schema_size_metrics = false,
-  $disable_innodb_metrics = false,
-  $instances = undef,
+  String $host                             = 'localhost',
+  Optional[String] $user                   = 'datadog',
+  Optional[Variant[String, Integer]] $port = 3306,
+  Optional[String] $password               = undef,
+  Optional[String] $sock                   = undef,
+  Array $tags                              = [],
+  $replication                             = '0',
+  $galera_cluster                          = '0',
+  Boolean $extra_status_metrics            = false,
+  Boolean $extra_innodb_metrics            = false,
+  Boolean $extra_performance_metrics       = false,
+  Boolean $schema_size_metrics             = false,
+  Boolean $disable_innodb_metrics          = false,
+  Optional[Array] $queries                 = [],
+  Optional[Array] $instances               = undef,
+  Optional[Array] $logs                    = [],
   ) inherits datadog_agent::params {
   include datadog_agent
 
-  validate_array($tags)
+  if ($host == undef and $sock == undef) or
+    ($host != undef and $port == undef and $sock == undef) {
+    fail('invalid MySQL configuration')
+  }
 
   if !$instances and $host {
     $_instances = [{
@@ -88,6 +103,7 @@ class datadog_agent::integrations::mysql(
       'extra_performance_metrics' => $extra_performance_metrics,
       'schema_size_metrics'       => $schema_size_metrics,
       'disable_innodb_metrics'    => $disable_innodb_metrics,
+      'queries'                   => $queries,
     }]
   } elsif !$instances{
     $_instances = []
@@ -95,17 +111,31 @@ class datadog_agent::integrations::mysql(
     $_instances = $instances
   }
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/mysql.yaml"
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/mysql.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/mysql.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
+
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/mysql.yaml"
+    $dst = $legacy_dst
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0600',
+    mode    => $datadog_agent::params::permissions_protected_file,
     content => template('datadog_agent/agent-conf.d/mysql.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name],

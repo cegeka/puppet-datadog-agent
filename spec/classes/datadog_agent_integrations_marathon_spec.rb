@@ -1,46 +1,42 @@
 require 'spec_helper'
 
 describe 'datadog_agent::integrations::marathon' do
-  context 'supported agents - v5 and v6' do
-    agents = { '5' => false, '6' => true }
-    agents.each do |_, enabled|
-      let(:pre_condition) { "class {'::datadog_agent': agent6_enable => #{enabled}}" }
-      let(:facts) {{
-        operatingsystem: 'Ubuntu',
-      }}
-      if !enabled
-        let(:conf_dir) { '/etc/dd-agent/conf.d' }
-      else
-        let(:conf_dir) { '/etc/datadog-agent/conf.d' }
-      end
-      let(:dd_user) { 'dd-agent' }
-      let(:dd_group) { 'root' }
-      let(:dd_package) { 'datadog-agent' }
-      let(:dd_service) { 'datadog-agent' }
-      let(:conf_file) { "#{conf_dir}/marathon.yaml" }
+  context 'supported agents' do
+    ALL_SUPPORTED_AGENTS.each do |agent_major_version|
+      let(:pre_condition) { "class {'::datadog_agent': agent_major_version => #{agent_major_version}}" }
 
-      it { should compile.with_all_deps }
-      it { should contain_file(conf_file).with(
-        owner: dd_user,
-        group: dd_group,
-        mode: '0644',
-      )}
-      it { should contain_file(conf_file).that_requires("Package[#{dd_package}]") }
-      it { should contain_file(conf_file).that_notifies("Service[#{dd_service}]") }
+      if agent_major_version == 5
+        let(:conf_file) { '/etc/dd-agent/conf.d/marathon.yaml' }
+      else
+        let(:conf_file) { "#{CONF_DIR}/marathon.d/conf.yaml" }
+      end
+
+      it { is_expected.to compile.with_all_deps }
+      it {
+        is_expected.to contain_file(conf_file).with(
+          owner: DD_USER,
+          group: DD_GROUP,
+          mode: PERMISSIONS_FILE,
+        )
+      }
+      it { is_expected.to contain_file(conf_file).that_requires("Package[#{PACKAGE_NAME}]") }
+      it { is_expected.to contain_file(conf_file).that_notifies("Service[#{SERVICE_NAME}]") }
 
       context 'with default parameters' do
-        it { should contain_file(conf_file).with_content(%r{default_timeout: 5}) }
-        it { should contain_file(conf_file).with_content(%r{url: http://localhost:8080}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{default_timeout: 5}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{url: http://localhost:8080}) }
       end
 
       context 'with params set' do
-        let(:params) {{
-          marathon_timeout: 867,
-          url: 'http://foo.bar.baz:5309',
-        }}
+        let(:params) do
+          {
+            marathon_timeout: 867,
+            url: 'http://foo.bar.baz:5309',
+          }
+        end
 
-        it { should contain_file(conf_file).with_content(%r{default_timeout: 867}) }
-        it { should contain_file(conf_file).with_content(%r{url: http://foo.bar.baz:5309}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{default_timeout: 867}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{url: http://foo.bar.baz:5309}) }
       end
     end
   end

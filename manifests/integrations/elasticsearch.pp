@@ -24,31 +24,25 @@
 #  }
 #
 class datadog_agent::integrations::elasticsearch(
-  $cluster_stats      = false,
-  $password           = undef,
-  $pending_task_stats = true,
-  $pshard_stats       = false,
-  $ssl_cert           = undef,
-  $ssl_key            = undef,
-  $ssl_verify         = true,
-  $tags               = [],
-  $url                = 'http://localhost:9200',
-  $username           = undef,
-  $instances          = undef
+  Boolean $cluster_stats               = false,
+  Optional[String] $password           = undef,
+  Boolean$pending_task_stats           = true,
+  Boolean $pshard_stats                = false,
+  Optional[String] $ssl_cert           = undef,
+  Optional[String] $ssl_key            = undef,
+  Variant[Boolean, String] $ssl_verify = true,
+  Array $tags                          = [],
+  String $url                          = 'http://localhost:9200',
+  Optional[String] $username           = undef,
+  Optional[Array] $instances           = undef
 ) inherits datadog_agent::params {
   include datadog_agent
 
-  validate_array($tags)
   # $ssl_verify can be a bool or a string
   # https://github.com/DataDog/dd-agent/blob/master/checks.d/elastic.py#L454-L455
-  if is_bool($ssl_verify) {
-    validate_bool($ssl_verify)
-  } elsif $ssl_verify != undef {
-    validate_string($ssl_verify)
+  if validate_legacy('Variant[Boolean, String]', 'is_string', $ssl_verify){
     validate_absolute_path($ssl_verify)
   }
-  validate_bool($cluster_stats, $pending_task_stats, $pshard_stats)
-  validate_string($password, $ssl_cert, $ssl_key, $url, $username)
 
   if !$instances and $url {
     $_instances = [{
@@ -69,17 +63,31 @@ class datadog_agent::integrations::elasticsearch(
     $_instances = $instances
   }
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/elastic.yaml"
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/elastic.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/elastic.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
+
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/elastic.yaml"
+    $dst = $legacy_dst
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0644',
+    mode    => $datadog_agent::params::permissions_file,
     content => template('datadog_agent/agent-conf.d/elastic.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name]

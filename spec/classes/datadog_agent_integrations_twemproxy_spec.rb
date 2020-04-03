@@ -1,55 +1,52 @@
 require 'spec_helper'
 
 describe 'datadog_agent::integrations::twemproxy' do
-  context 'supported agents - v5 and v6' do
-    agents = { '5' => false, '6' => true }
-    agents.each do |_, enabled|
-      let(:pre_condition) { "class {'::datadog_agent': agent6_enable => #{enabled}}" }
-      let(:facts) {{
-        operatingsystem: 'Ubuntu',
-      }}
-      if !enabled
-        let(:conf_dir) { '/etc/dd-agent/conf.d' }
-      else
-        let(:conf_dir) { '/etc/datadog-agent/conf.d' }
-      end
-      let(:dd_user) { 'dd-agent' }
-      let(:dd_group) { 'root' }
-      let(:dd_package) { 'datadog-agent' }
-      let(:dd_service) { 'datadog-agent' }
-      let(:conf_file) { "#{conf_dir}/twemproxy.yaml" }
+  context 'supported agents' do
+    ALL_SUPPORTED_AGENTS.each do |agent_major_version|
+      let(:pre_condition) { "class {'::datadog_agent': agent_major_version => #{agent_major_version}}" }
 
-      it { should compile.with_all_deps }
-      it { should contain_file(conf_file).with(
-        owner: dd_user,
-        group: dd_group,
-        mode: '0600',
-      )}
-      it { should contain_file(conf_file).that_requires("Package[#{dd_package}]") }
-      it { should contain_file(conf_file).that_notifies("Service[#{dd_service}]") }
+      if agent_major_version == 5
+        let(:conf_file) { '/etc/dd-agent/conf.d/twemproxy.yaml' }
+      else
+        let(:conf_file) { "#{CONF_DIR}/twemproxy.d/conf.yaml" }
+      end
+
+      it { is_expected.to compile.with_all_deps }
+      it {
+        is_expected.to contain_file(conf_file).with(
+          owner: DD_USER,
+          group: DD_GROUP,
+          mode: PERMISSIONS_PROTECTED_FILE,
+        )
+      }
+      it { is_expected.to contain_file(conf_file).that_requires("Package[#{PACKAGE_NAME}]") }
+      it { is_expected.to contain_file(conf_file).that_notifies("Service[#{SERVICE_NAME}]") }
 
       context 'with default parameters' do
-        it { should contain_file(conf_file).with_content(%r{host: localhost}) }
-        it { should contain_file(conf_file).with_content(%r{port: 22222}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{host: localhost}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{port: 22222}) }
       end
 
       context 'with parameters set' do
-        let(:params) {{
-          instances: [
-            {
-              'host' => 'twemproxy1',
-              'port' => '1234',
-            },
-            {
-              'host' => 'twemproxy2',
-              'port' => '4567',
-            }
-          ]
-        }}
-        it { should contain_file(conf_file).with_content(%r{host: twemproxy1}) }
-        it { should contain_file(conf_file).with_content(%r{port: 1234}) }
-        it { should contain_file(conf_file).with_content(%r{host: twemproxy2}) }
-        it { should contain_file(conf_file).with_content(%r{port: 4567}) }
+        let(:params) do
+          {
+            instances: [
+              {
+                'host' => 'twemproxy1',
+                'port' => '1234',
+              },
+              {
+                'host' => 'twemproxy2',
+                'port' => '4567',
+              },
+            ],
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{host: twemproxy1}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{port: 1234}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{host: twemproxy2}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{port: 4567}) }
       end
     end
   end

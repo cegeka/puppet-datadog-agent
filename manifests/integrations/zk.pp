@@ -32,19 +32,31 @@ class datadog_agent::integrations::zk (
 ) inherits datadog_agent::params {
   include datadog_agent
 
-  validate_array($servers)
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/zk.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/zk.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/zk.yaml"
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/zk.yaml"
+    $dst = $legacy_dst
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0600',
+    mode    => $datadog_agent::params::permissions_protected_file,
     content => template('datadog_agent/agent-conf.d/zk.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name]

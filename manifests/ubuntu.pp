@@ -1,77 +1,66 @@
 # Class: datadog_agent::ubuntu
 #
-# This class contains the DataDog agent installation mechanism for Ubuntu
-#
-# Parameters:
-#
-# Actions:
-#
-# Requires:
-#
-# Sample Usage:
-#
+# This class contains the DataDog agent installation mechanism for Debian derivatives
 #
 
 class datadog_agent::ubuntu(
-  $apt_key = 'A2923DFF56EDA6E76E55E492D3A80E30382E94DE',
-  $agent_version = 'latest',
-  $other_keys = ['935F5A436A5A6E8788F0765B226AE980C7A7DA52'],
-  $location = 'https://apt.datadoghq.com',
-  $release = 'stable',
-  $repos = 'main',
-) inherits datadog_agent::params{
+  Integer $agent_major_version = $datadog_agent::params::default_agent_major_version,
+  String $apt_key = 'A2923DFF56EDA6E76E55E492D3A80E30382E94DE',
+  String $agent_version = $datadog_agent::params::agent_version,
+  Optional[String] $agent_repo_uri = undef,
+  String $release = $datadog_agent::params::apt_default_release,
+  Boolean $skip_apt_key_trusting = false,
+  Optional[String] $apt_keyserver = undef,
+) inherits datadog_agent::params {
 
-  ensure_packages(['apt-transport-https'])
-  validate_array($other_keys)
-
-  if !$::datadog_agent::skip_apt_key_trusting {
-    $mykeys = concat($other_keys, [$apt_key])
-
-    ::datadog_agent::ubuntu::install_key { $mykeys:
-      before  => File['/etc/apt/sources.list.d/datadog.list'],
-    }
+  if $agent_version =~ /^[0-9]+\.[0-9]+\.[0-9]+((?:~|-)[^0-9\s-]+[^-\s]*)?$/ {
+    $platform_agent_version = "1:${agent_version}-1"
+  }
+  else {
+    $platform_agent_version = $agent_version
   }
 
-  # This is a hack - I'm not happy about it, but we should rarely
-  # hit this code path
-  #
-  # Also, using $::apt_agent6_beta_repo to access fact instead of
-  # $facts hash - for compatibility with puppet3.x default behavior
-  if $::apt_agent6_beta_repo and $agent_version == 'latest' {
-    exec { 'datadog_apt-get_remove_agent6':
-      command     => '/usr/bin/apt-get remove -y -q datadog-agent',
+  case $agent_major_version {
+    5 : { $repos = 'main' }
+    6 : { $repos = '6' }
+    7 : { $repos = '7' }
+    default: { fail('invalid agent_major_version') }
+  }
+
+  if !$skip_apt_key_trusting {
+    $key = {
+      'id' => $apt_key,
+      'server' => $apt_keyserver,
     }
   } else {
-    exec { 'datadog_apt-get_remove_agent6':
-      command     => ':',  # NOOP builtin
-      noop        => true,
-      refreshonly => true,
-      provider    => 'shell',
-    }
+    $key = {}
   }
 
-  if $::apt_agent6_beta_repo {
-    file { '/etc/apt/sources.list.d/datadog-beta.list':
-      ensure => absent,
-    }
+  if ($agent_repo_uri != undef) {
+    $location = $agent_repo_uri
+  } else {
+    $location = 'https://apt.datadoghq.com/'
   }
 
-  file { '/etc/apt/sources.list.d/datadog.list':
-    ensure  => file,
-    owner   => 'root',
-    group   => 'root',
-    content => template('datadog_agent/datadog.list.erb'),
-    notify  => [Exec['datadog_apt-get_remove_agent6'],
-                Exec['datadog_apt-get_update']],
-    require => Package['apt-transport-https'],
+  apt::source { 'datadog-beta':
+    ensure => absent,
   }
 
-  exec { 'datadog_apt-get_update':
-    command     => '/usr/bin/apt-get update',
-    refreshonly => true,
-    tries       => 2, # https://bugs.launchpad.net/launchpad/+bug/1430011 won't get fixed until 16.04 xenial
-    try_sleep   => 30,
-    require     => File['/etc/apt/sources.list.d/datadog.list'],
+  apt::source { 'datadog5':
+    ensure => absent,
+  }
+
+  apt::source { 'datadog6':
+    ensure => absent,
+  }
+
+  apt::source { 'datadog':
+    comment  => 'Datadog Agent Repository',
+    location => $location,
+    release  => $release,
+    repos    => $repos,
+    require  => Class['apt'],
+    key      => $key,
   }
 
   package { 'datadog-agent-base':
@@ -80,16 +69,9 @@ class datadog_agent::ubuntu(
   }
 
   package { $datadog_agent::params::package_name:
-    ensure  => $agent_version,
-    require => [File['/etc/apt/sources.list.d/datadog.list'],
-                Exec['datadog_apt-get_update']],
+    ensure  => $platform_agent_version,
+    require => [Apt::Source['datadog'],
+                Class['apt::update']],
   }
 
-  service { $datadog_agent::params::service_name:
-    ensure    => $::datadog_agent::service_ensure,
-    enable    => $::datadog_agent::service_enable,
-    hasstatus => false,
-    pattern   => 'dd-agent',
-    require   => Package[$datadog_agent::params::package_name],
-  }
 }

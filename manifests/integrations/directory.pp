@@ -55,22 +55,17 @@
 # }
 
 class datadog_agent::integrations::directory (
-  $directory   = '',
-  $filegauges  = false,
-  $recursive   = true,
-  $countonly   = false,
-  $nametag     = '',
-  $dirtagname  = '',
-  $filetagname = '',
-  $pattern     = '',
-  $instances   = undef,
+  String $directory          = '',
+  Boolean $filegauges        = false,
+  Boolean $recursive         = true,
+  Boolean $countonly         = false,
+  String $nametag            = '',
+  String $dirtagname         = '',
+  String $filetagname        = '',
+  String $pattern            = '',
+  Optional[Array] $instances = undef,
 ) inherits datadog_agent::params {
   include datadog_agent
-
-  validate_string($directory)
-  validate_bool($filegauges)
-  validate_bool($recursive)
-  validate_bool($countonly)
 
   if !$instances and $directory == '' {
     fail('bad directory argument and no instances hash provided')
@@ -93,17 +88,31 @@ class datadog_agent::integrations::directory (
     $_instances = $instances
   }
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/directory.yaml"
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/directory.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/directory.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
+
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/directory.yaml"
+    $dst = $legacy_dst
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0600',
+    mode    => $datadog_agent::params::permissions_protected_file,
     content => template('datadog_agent/agent-conf.d/directory.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name]

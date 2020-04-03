@@ -14,8 +14,8 @@
 #   $tag_families
 #       Tag queues "families" based on regex match
 #   $ssl_verify
-#       Skip verification of the RabbitMQ management web endpoint 
-#       SSL certificate 
+#       Skip verification of the RabbitMQ management web endpoint
+#       SSL certificate
 #   $nodes
 #   $nodes_regexes
 #       Specify the nodes to collect metrics on (up to 100 nodes).
@@ -32,6 +32,11 @@
 #
 #       If `tag families` are enabled, the first capture group in the regex will
 #       be used as the queue_family tag
+#   $exchanges
+#   $exchanges_regexes
+#       Specify the exchanges to collect metrics on (up to 50 queues).
+#       If you have less than 50 queues, metrics will be collected on all exchanges
+#       by default.
 #   $vhosts
 #       List of vhosts to monitor with service checks. By default, a list of all
 #       vhosts is fetched and each one will be checked using the aliveness API.
@@ -46,41 +51,47 @@
 #
 
 class datadog_agent::integrations::rabbitmq (
-  $url            = undef,
-  $username       = 'guest',
-  $password       = 'guest',
-  $ssl_verify     = true,
-  $tag_families   = false,
-  $nodes          = [],
-  $nodes_regexes  = [],
-  $queues         = [],
-  $queues_regexes = [],
-  $vhosts         = [],
+  Optional[String] $url      = undef,
+  Optional[String] $username = 'guest',
+  Optional[String] $password = 'guest',
+  Boolean $ssl_verify        = true,
+  Boolean $tag_families      = false,
+  Array $nodes               = [],
+  Array $nodes_regexes       = [],
+  Array $queues              = [],
+  Array $queues_regexes      = [],
+  Array $vhosts              = [],
+  Array $exchanges           = [],
+  Array $exchanges_regexes   = [],
 ) inherits datadog_agent::params {
 
-  validate_string($url)
-  validate_string($username)
-  validate_string($password)
-  validate_bool($ssl_verify)
-  validate_bool($tag_families)
-  validate_array($nodes)
-  validate_array($nodes_regexes)
-  validate_array($queues)
-  validate_array($queues_regexes)
-  validate_array($vhosts)
   include datadog_agent
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/rabbitmq.yaml"
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/rabbitmq.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/rabbitmq.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
+
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/rabbitmq.yaml"
+    $dst = $legacy_dst
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0600',
+    mode    => $datadog_agent::params::permissions_protected_file,
     content => template('datadog_agent/agent-conf.d/rabbitmq.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name],

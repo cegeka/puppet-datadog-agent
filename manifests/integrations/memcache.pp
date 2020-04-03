@@ -31,18 +31,14 @@
 #  }
 #
 class datadog_agent::integrations::memcache (
-  $url                    = 'localhost',
-  $port                   = 11211,
-  $tags                   = [],
-  $items                  = false,
-  $slabs                  = false,
-  $instances = undef,
+  String $url                     = 'localhost',
+  Variant[String, Integer] $port  = 11211,
+  Array $tags                     = [],
+  Variant[Boolean, String] $items = false,
+  Variant[Boolean, String] $slabs = false,
+  Optional[Array] $instances      = undef,
 ) inherits datadog_agent::params {
   include datadog_agent
-
-  validate_string($url)
-  validate_array($tags)
-  validate_integer($port)
 
   if !$instances and $url {
     $_instances = [{
@@ -58,17 +54,31 @@ class datadog_agent::integrations::memcache (
     $_instances = $instances
   }
 
-  if $::datadog_agent::agent6_enable {
-    $dst = "${datadog_agent::conf6_dir}/mcache.yaml"
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/mcache.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/mcache.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
+
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
   } else {
-    $dst = "${datadog_agent::conf_dir}/mcache.yaml"
+    $dst = $legacy_dst
   }
 
   file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0600',
+    mode    => $datadog_agent::params::permissions_protected_file,
     content => template('datadog_agent/agent-conf.d/mcache.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name]

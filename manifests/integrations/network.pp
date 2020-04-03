@@ -22,20 +22,38 @@
 #
 #
 class datadog_agent::integrations::network(
-  $collect_connection_state = false,
-  $excluded_interfaces = ['lo','lo0'],
-  $excluded_interface_re = [],
-  $combine_connection_states = true,
+  Boolean $collect_connection_state = false,
+  Array[String] $excluded_interfaces = ['lo','lo0'],
+  Array $excluded_interface_re = [],
+  Boolean $combine_connection_states = true,
 ) inherits datadog_agent::params {
   include ::datadog_agent
 
-  validate_array($excluded_interfaces)
+  $legacy_dst = "${datadog_agent::params::legacy_conf_dir}/network.yaml"
+  if $::datadog_agent::_agent_major_version > 5 {
+    $dst_dir = "${datadog_agent::params::conf_dir}/network.d"
+    file { $legacy_dst:
+      ensure => 'absent'
+    }
 
-  file { "${datadog_agent::params::conf_dir}/network.yaml":
+    file { $dst_dir:
+      ensure  => directory,
+      owner   => $datadog_agent::params::dd_user,
+      group   => $datadog_agent::params::dd_group,
+      mode    => $datadog_agent::params::permissions_directory,
+      require => Package[$datadog_agent::params::package_name],
+      notify  => Service[$datadog_agent::params::service_name]
+    }
+    $dst = "${dst_dir}/conf.yaml"
+  } else {
+    $dst = $legacy_dst
+  }
+
+  file { $dst:
     ensure  => file,
     owner   => $datadog_agent::params::dd_user,
     group   => $datadog_agent::params::dd_group,
-    mode    => '0600',
+    mode    => $datadog_agent::params::permissions_protected_file,
     content => template('datadog_agent/agent-conf.d/network.yaml.erb'),
     require => Package[$datadog_agent::params::package_name],
     notify  => Service[$datadog_agent::params::service_name],

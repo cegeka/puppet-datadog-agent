@@ -1,15 +1,241 @@
 Changes
 =======
 
+# 3.1.0 / 2020-01-14
+
+* [FEATURE] Accept the same version string in Debian/Ubuntu than in other OSes when pinning the Agent. See [#591][]
+* [FEATURE] Add the `check_hostname` and `ssl_server_name` parameters to the `http_check` integration. See [#599][] (thanks [@asenci][])
+* [BUGFIX] Remove include from `system_probe.pp` that caused error "This Function Call is unacceptable as a top level construct in this location" on recent Puppet versions. See [#596][] (thanks again [@asenci][])
+* [BUGFIX] Fix broken `facts_to_tags` on Agent 5. See [#598][]
+* [CHORE] Migrate project to PDK (Puppet Development Kit). See [#597][]
+
+# 3.0.0 / 2019-12-18
+
+### Overview
+
+**This release will install Agent 7.x by default.**
+
+Some config parameters prefixed with `agent6`/`agent5` have been renamed to
+accomodate this change. Please read the [docs]() for more details and update
+your configuration accordingly.
+
+Datadog Agent 7 uses Python 3 so if you were running any custom checks written
+in Python, they must now be compatible with Python 3. If you were not running
+any custom checks or if your custom checks are already compatible with Python 3,
+then it is safe to upgrade.
+
+### Notes
+
+* [MAJOR] Agent 7 support. See [#588][].
+    * Introduces `agent_major_version` parameter that replaces `agent5_enable`.
+    * Removes `agent6`/`agent5` prefixes in argument names.
+    * Unifies config for Agent 5/6 repos and removes the use of facter.
+* [IMPROVEMENT] Removes uses of `validate_legacy`.
+* [IMPROVEMENT] Keeps the group ownership of config files as `dd-agent`.
+* [IMPROVEMENT] Removes `service_name` and `package_name` parameters.
+
+# 2.10.0 / 2019-12-12
+
+### Notes
+
+* [FEATURE] Add Network Performance Monitoring support. See [#584][]. (Thanks [@asenci][])
+* [BUGFIX] Fix logs section of mysql.yaml being ignored. See [#587][]. (Thanks [@asenci][])
+
+# 2.9.0 / 2019-11-20
+
+### Notes
+
+* [FEATURE] Official Windows support.
+* [FEATURE] Support latest version of puppet libraries. See [#576][]. (Thanks [@flyinbutrs][])
+* [FEATURE] Support Oracle Linux. See [#574][]. (Thanks [@atayts][])
+* [FEATURE] Add logs parameter to mysql integration. See [#572][]. (Thanks [@asenci][])
+* [BUGFIX] Remove unnecessary restart of the agent on Windows. [#562][]. (Thanks [@jvanbrunschot][])
+* [BUGFIX] Give Administrator group access to datadog.yaml. See [#571][].
+* [BUGFIX] Fix import of RPM key on recent versions of GPG. See [#581][]. (Thanks [@devinmatte][])
+* [BUGFIX] Blacklist version 6.14.0 and 6.14.1 on Windows. See [#578][].
+
+# 2.8.0 / 2019-09-18
+
+### Notes
+
+* [FEATURE] Initial Windows support. See [#557][]
+* [FEATURE] Add ignore_ssl_warning to HTTP check. See [#556][] (Thanks [@zabacad][])
+* [FEATURE] Add logs_open_files_limit parameter [#548][]. (Thanks [@rmrf-run][])
+* [BUGFIX] Fix a warning caused by calling `validate_legacy` with the default `additional_checksd` value of `undef`. See [#551][].
+* [BUGFIX] Fix Redis integration, where tags weren't evaluated when the keys param was empty. See [#558][] (Thanks [@jubagarie][])
+* [DOCUMENTATION] Fix doc for HTTP check include_content. See [#555][] (Thanks [@zabacad][])
+
+# 2.7.0 / 2019-07-11
+
+### Notes
+
+* [FEATURE] Support puppet 6. See [#537][]
+* [FEATURE] Added a define that wraps the agent integration command. See [#534][]
+* [BUGFIX] Add whitespace surpression to redisdb.yaml.erb to ensure a valid yaml. See [#533][] (Thanks again [@Aramack][])
+* [BUGFIX] Do not include additional_checksd if not set. See [#545][] (Thanks [@turnopil][])
+* [IMPROVEMENT] Raise if hostname_extraction_regex doesn't capture hostname. See [#544][]
+
+# 2.6.0 / 2019-06-04
+
+### Notes
+
+* [FEATURE] AcitveMQ_XML: added new integration. See [#521][]
+* [FEATURE] Custom Integration: support logs collection. See [#513][] (Thanks [@zickzackv][])
+* [FEATURE] Nginx: support logs collection. See [#519][] (Thanks [@jadams-av][])
+* [FEATURE] Redis: adding multi-instance support. See [#520][]
+* [FEATURE] HTTP check: add support for `method`, `data` configuration. See [#515][] (Thanks [@Aramack][])
+* [FEATURE] HTTP check: add reverse content-match support. See [#524][] (Thanks [@dorg-kanderson][])
+* [BUGFIX] Agent 6: track integration configuration directories - fixes `conf_dir_purge`. See [#525][] (Thanks [@Aramack][])
+* [BUGFIX] Agent 6: fixes `additional_checksd` not appearing in agent config. See [#513][] (Thanks [@gotyaio][])
+* [BUGFIX] Postgres: allow setting password in Hiera. See [#514][] (Thanks [@cabrinha][])
+* [BUGFIX] Redis: fix trying to call `empty?` on an integer on template. See [#527][]
+* [SANITY] Module: bring up concat dependency upper bound to <6.0.0. See [#516][] (Thanks [@siebrand][])
+* [SANITY] Module: bring up stdlib dependency upper bound to <6.0.0. See [#513][] (Thanks [@skiedude][])
+* [SANITY] Module: bring up apt dependency upper bound to <=6.0.0. See [#513][] (Thanks [@skiedude][])
+* [DOCUMENTATION] Fixes on disk, ndingx and activemq_xml docs. See [#528][]
+
+# 2.5.0 / 2019-03-25
+
+### Notes
+
+* [FEATURE] Kafka: Updated kafka integration to include all stats. See [#498][] (Thanks [@dpricha89][])
+* [FEATURE] PostgreSQL: enable extra metrics collection. See [#493][] (Thanks [@diogokiss][])
+* [FEATURE] Reporting: make gem provider configurable at the datadog-agent class level. See [#486][]
+* [IMPROVEMENT] Disk: support new integration options replacing deprecations. See [#508][]
+* [IMPROVEMENT] Remove apt-transport-https package install. See [#504][] (Thanks [@fr3nd][])
+* [BUGFIX] Reporting: use https:// in datadog-reports.yaml. See [#503][] (Thanks [@cabrinha][])
+* [BUGFIX] TCP check: `check_name` instead of name. See [#501][] (Thanks [@cabrinha][])
+* [BUGFIX] SSH check: fix broken config location: `ssh_check.d` instead of `ssh.d`. See [#502][] (Thanks [@cabrinha][])
+* [BUGFIX] Revert chatty apt-get update behavior. See [#506][] and [#507][]
+
+# 2.4.1 / 2019-02-21
+
+### Notes
+
+* [FEATURE] APM Trace Search. See [#485][]
+* [BUGFIX] Fix `apm_analyzed_spans` config directive. See [#496][] (Thanks [@zoom-kris-anderson][])
+* [BUGFIX] Custom integration defined type bugfix. See [#490][] (Thanks [@o0oxid][])
+* [DOCS] multiple documentation improvements. (See [#492][] and [#487][])
+
+# 2.4.0 / 2018-12-27
+
+### Notes
+
+* [FEATURE] Support EU site in the reporter. See [#468][]
+* [FEATURE] Add `datadog_site` for EU/USA region support. See [#464][]
+* [FEATURE] Make Agent 6 `cmd_port` configurable. See [#473][] (Thanks [@arkpoah][])
+* [FEATURE] Support backup keyservers. See [#470][]
+* [FEATURE] Support `hostname_fqdn`. See [#481][] (Thanks [@alexfouche][])
+* [FEATURE] Support GCE tag collection. See [#481][] (Thanks [@alexfouche][])
+* [FEATURE] Tomcat: support `jmx_url` option. See [#482][] (Thanks [@evansj][])
+* [IMPROVEMENT] Reports: fix `hostname_extraction_regex` default to undef. See [#482][] (Thanks [@evansj][])
+* [IMPROVEMENT] Use recommended locations for integration configs. See [#481][] (Thanks [@alexfouche][])
+* [IMPROVEMENT] Silence agent6_extra_options notification on default params. See [#449][] (Thanks [@spectralblu][])
+* [IMPROVEMENT] Improve proxy argument management. See [#484][]
+* [IMPROVEMENT] Generic integrations improvements. See [#471][]
+* [BUGFIX] Fix potential dependency cycle when used with other modules. See [#463][]
+* [BUGFIX] Fix Hiera tag merge in process integration. See [#481][] (Thanks [@alexfouche][])
+* [BUGFIX] Merge `datadog_agent::tags` hiera values. See [#472][] (Thanks [@paulhamby][])
+* [BUGFIX] Fix `apm_enabled` YAML. See [#466][] (Thanks [@NoodlesNZ][])
+* [BUGFIX] Fix `facts_to_tags` regression in Agent 6. See [#455][] (Thanks [@tommoyangn][])
+* [TEST] Removing `sudo: false` as required by Travis CI. See [#475][]
+* [TEST] Adding vagrant-based test environment facilities. See [#462][]
+
+# 2.3.0 / 2018-07-11
+
+### Notes
+
+* [FEATURE] Logs: enable log configuration management. See [#439][]
+* [FEATURE] MySQL: enable custom queries/metrics. See [#316][] (Thanks [@yrcjaya][])
+* [FEATURE] PHP-fpm: add parameter for ping-reply. See [#417][] (Thanks [@Aramack][])
+* [FEATURE] Agents: allow version pinning from the main manifest. See [#446][]
+* [BUGFIX] Agent 5: fix user/group override for config file. See [#438][] (Thanks [@arkpoah][])
+* [BUGFIX] Agent 6: honor statsd forwarding parameters. See [#408][] (Thanks [@djova][])
+* [BUGFIX] Agent 6: honor hostname configuration override. See [#445][]
+* [BUGFIX] Agent 6: honor `collect_ec2_tags` parameter. See [#446][]
+* [BUGFIX] Agents: (Amazon Linux bug) allow service provider override. See [#444][]
+* [BUGFIX] Network: fix configuration path. See [#433][] (Thanks [@ewansteele][])
+* [BUGFIX] Reporting: fix `hostname_extraction_regex` config option. See [#443][] (Thanks [@ColinHerbert][])
+* [DEPRECATED] Agent 6: `proxy_*` options are deprecated use `agent6_extra_options`. See [#446][]
+* [DOCS] README: fix apm, process config options. See [#437][] (Thanks [@pulkitsethi][])
+
+# 2.2.0 / 2018-05-16
+
+### Notes
+
+* [FEATURE] APM: enable apm non-local traffic. See [#431][] (Thanks [@dschaaff][])
+* [FEATURE] APM: add environment config parameter. See [#431][] (Thanks [@dschaaff][])
+* [FEATURE] Process: add config fields for process agent scrubbing. See [#426][]
+* [FEATURE] HTTP check: allow specification of CA cert. See [#418][] (Thanks [@ffleming][])
+* [BUGFIX] PgBouncer: fix indentation in output configuration file. See [#427][] (Thanks [@fwelschen][])
+* [BUGFIX] Process: fixes bad enabling directive. See [#420][] (Thanks [@dschaaff][])
+* [BUGFIX] MySQL check: render port number correctly in output YAML. See [#424][] (Thanks [@kevin-bowers][])
+* [DEPRECATE] DEB: stop installing old APT key. See [#406][]
+
+# 2.1.1 / 2018-03-14
+
+### Notes
+
+* [BUGFIX] RHEL: fix faulty check prompting agent reinstalls. See [#412][] (Thanks [@jcarr-sailthru][])
+* [BUGFIX] MySQL: fix broken parameters to manifest. See [#411][]
+
+# 2.1.0 / 2018-03-06
+
+### Notes
+
+* [FEATURE] Kafka: support multiple instances. See [#404][]
+* [FEATURE] Consul: add network latency check support. See [#394][] (Thanks [@Aramack][])
+* [BUGFIX] Stdlib: fix deprecations after stdlib 4.24.0. See [#403][] and [#404][] (Thanks [@teintuc][])
+* [BUGFIX] RHEL: stop specifying service resource provider `redhat`. See [#401][] (Thanks [@milescrabill][])
+* [IMPROVEMENT] Add types to multiple manifest parameters. See [#404][]
+* [COMPATIBILITY] Drop puppetlabs-apt dependency lower bound to `2.4.0`. See [#404][] and 400 (Thanks [@samueljamesmarshall][])
+
+# 2.0.1 / 2018-02-28
+
+### Notes
+
+* [BUGFIX] RHEL: fix bad default agent6 repo url. See [#397][]
+
+# 2.0.0 / 2018-02-27
+
+### Overview
+This release is a major release, there are a some breaking changes. We have
+tried to keep the interface as similar as possible to what the community
+was already used to, but have had to make some changes and cleaned up some
+of the interfaces to some classes. Most notably the main `datadog_agent`
+class, and the `datadog_agent::ubuntu` and `datadog_agent::redhat`.
+
+Most checks manifest should remain backward compatible.
+
+Please note this new release will install datadog agent version 6.x by default.
+
+Finally, deprecated modules and support for EOL'd puppets has been dropped
+so if you're running a puppet server <= `4.5.x` or PE <= `2016.4.x` although
+the module might work for some versions, it has not been tested in those
+environments.
+
+Please read the [docs]() for more details.
+
+### Notes
+
+* [MAJOR] Datadog agent defaults to 6.x. Puppet >=4.6. See [#387][] and [docs](https://github.com/DataDog/puppet-datadog-agent/blob/master/README.md)
+* [FEATURE] Postgresl: adding SSL parameter support. See [#391][] (thanks [@com6056][])
+* [FEATURE] Docker_daemon: parametrize integration. See [#378][] (thanks [@flyinprogrammer][])
+* [FEATURE] Kafka: added support for multiple instances. See [#343][], [#395][] (thanks [@jensendw][])
+* [BUGFIX] Tomcat: fix broken metrics yaml. See [#390][] (thanks [@oshmyrko][])
+* [BUGFIX] Agent6: fix Agent6 beta fact. See [#384][] (thanks [@scottgeary][])
+* [CI] APM: fix APM spec tests. See [#389][]
+* [CI] APM: do not apply footer if empty string. See [#381][] (thanks [@rothgar][])
+
 # 1.12.1 / 2017-12-29
 
-### notes
+### Notes
 
 * [BUGFIX] agent6: fix generated YAML. See [#379][]
 
 # 1.12.0 / 2017-12-13
 
-### notes
+### Notes
 
 * [FEATURE] agent6 beta support. See [#356][]
 * [FEATURE] directory integration. See [#357][] (thanks [@alexfouche][])
@@ -26,10 +252,10 @@ Changes
 * [IMPROVEMENT] pgbouncer: support multiple instances. See [#361][] (thanks [@ajvb][])
 * [IMPROVEMENT] general cleanup. See [#357][] and [#376][] (thanks [@alexfouche][])
 
-* [BUGFIX] agent6: fix downgrade back to agent5 if on `latest` version. See [#375][] 
-* [BUGFIX] apt: only grep for last 8 characters to verify key. See [#373][] and [#374][] (thanks [@szponek][]) 
+* [BUGFIX] agent6: fix downgrade back to agent5 if on `latest` version. See [#375][]
+* [BUGFIX] apt: only grep for last 8 characters to verify key. See [#373][] and [#374][] (thanks [@szponek][])
 
-* [DOCUMENTATION] fix tagging documentation. See [#347][] (thanks [@bit-herder][]) 
+* [DOCUMENTATION] fix tagging documentation. See [#347][] (thanks [@bit-herder][])
 
 # 1.11.0 / 2017-07-27
 
@@ -288,6 +514,8 @@ Changes
 
 # 1.0.1
 
+[docs]: https://github.com/DataDog/puppet-datadog-agent/blob/master/README.md
+
 <!--- The following link definition list is generated by PimpMyChangelog --->
 [#79]: https://github.com/DataDog/puppet-datadog-agent/issues/79
 [#139]: https://github.com/DataDog/puppet-datadog-agent/issues/139
@@ -369,6 +597,7 @@ Changes
 [#311]: https://github.com/DataDog/puppet-datadog-agent/issues/311
 [#313]: https://github.com/DataDog/puppet-datadog-agent/issues/313
 [#315]: https://github.com/DataDog/puppet-datadog-agent/issues/315
+[#316]: https://github.com/DataDog/puppet-datadog-agent/issues/316
 [#318]: https://github.com/DataDog/puppet-datadog-agent/issues/318
 [#322]: https://github.com/DataDog/puppet-datadog-agent/issues/322
 [#323]: https://github.com/DataDog/puppet-datadog-agent/issues/323
@@ -385,6 +614,7 @@ Changes
 [#338]: https://github.com/DataDog/puppet-datadog-agent/issues/338
 [#340]: https://github.com/DataDog/puppet-datadog-agent/issues/340
 [#341]: https://github.com/DataDog/puppet-datadog-agent/issues/341
+[#343]: https://github.com/DataDog/puppet-datadog-agent/issues/343
 [#346]: https://github.com/DataDog/puppet-datadog-agent/issues/346
 [#347]: https://github.com/DataDog/puppet-datadog-agent/issues/347
 [#352]: https://github.com/DataDog/puppet-datadog-agent/issues/352
@@ -400,9 +630,110 @@ Changes
 [#375]: https://github.com/DataDog/puppet-datadog-agent/issues/375
 [#376]: https://github.com/DataDog/puppet-datadog-agent/issues/376
 [#377]: https://github.com/DataDog/puppet-datadog-agent/issues/377
+[#378]: https://github.com/DataDog/puppet-datadog-agent/issues/378
 [#379]: https://github.com/DataDog/puppet-datadog-agent/issues/379
+[#381]: https://github.com/DataDog/puppet-datadog-agent/issues/381
+[#384]: https://github.com/DataDog/puppet-datadog-agent/issues/384
+[#387]: https://github.com/DataDog/puppet-datadog-agent/issues/387
+[#389]: https://github.com/DataDog/puppet-datadog-agent/issues/389
+[#390]: https://github.com/DataDog/puppet-datadog-agent/issues/390
+[#391]: https://github.com/DataDog/puppet-datadog-agent/issues/391
+[#394]: https://github.com/DataDog/puppet-datadog-agent/issues/394
+[#395]: https://github.com/DataDog/puppet-datadog-agent/issues/395
+[#397]: https://github.com/DataDog/puppet-datadog-agent/issues/397
+[#401]: https://github.com/DataDog/puppet-datadog-agent/issues/401
+[#403]: https://github.com/DataDog/puppet-datadog-agent/issues/403
+[#404]: https://github.com/DataDog/puppet-datadog-agent/issues/404
+[#406]: https://github.com/DataDog/puppet-datadog-agent/issues/406
+[#408]: https://github.com/DataDog/puppet-datadog-agent/issues/408
+[#411]: https://github.com/DataDog/puppet-datadog-agent/issues/411
+[#412]: https://github.com/DataDog/puppet-datadog-agent/issues/412
+[#417]: https://github.com/DataDog/puppet-datadog-agent/issues/417
+[#418]: https://github.com/DataDog/puppet-datadog-agent/issues/418
+[#420]: https://github.com/DataDog/puppet-datadog-agent/issues/420
+[#424]: https://github.com/DataDog/puppet-datadog-agent/issues/424
+[#426]: https://github.com/DataDog/puppet-datadog-agent/issues/426
+[#427]: https://github.com/DataDog/puppet-datadog-agent/issues/427
+[#431]: https://github.com/DataDog/puppet-datadog-agent/issues/431
+[#433]: https://github.com/DataDog/puppet-datadog-agent/issues/433
+[#437]: https://github.com/DataDog/puppet-datadog-agent/issues/437
+[#438]: https://github.com/DataDog/puppet-datadog-agent/issues/438
+[#439]: https://github.com/DataDog/puppet-datadog-agent/issues/439
+[#443]: https://github.com/DataDog/puppet-datadog-agent/issues/443
+[#444]: https://github.com/DataDog/puppet-datadog-agent/issues/444
+[#445]: https://github.com/DataDog/puppet-datadog-agent/issues/445
+[#446]: https://github.com/DataDog/puppet-datadog-agent/issues/446
+[#449]: https://github.com/DataDog/puppet-datadog-agent/issues/449
+[#455]: https://github.com/DataDog/puppet-datadog-agent/issues/455
+[#462]: https://github.com/DataDog/puppet-datadog-agent/issues/462
+[#463]: https://github.com/DataDog/puppet-datadog-agent/issues/463
+[#464]: https://github.com/DataDog/puppet-datadog-agent/issues/464
+[#466]: https://github.com/DataDog/puppet-datadog-agent/issues/466
+[#468]: https://github.com/DataDog/puppet-datadog-agent/issues/468
+[#470]: https://github.com/DataDog/puppet-datadog-agent/issues/470
+[#471]: https://github.com/DataDog/puppet-datadog-agent/issues/471
+[#472]: https://github.com/DataDog/puppet-datadog-agent/issues/472
+[#473]: https://github.com/DataDog/puppet-datadog-agent/issues/473
+[#475]: https://github.com/DataDog/puppet-datadog-agent/issues/475
+[#481]: https://github.com/DataDog/puppet-datadog-agent/issues/481
+[#482]: https://github.com/DataDog/puppet-datadog-agent/issues/482
+[#484]: https://github.com/DataDog/puppet-datadog-agent/issues/484
+[#485]: https://github.com/DataDog/puppet-datadog-agent/issues/485
+[#486]: https://github.com/DataDog/puppet-datadog-agent/issues/486
+[#487]: https://github.com/DataDog/puppet-datadog-agent/issues/487
+[#490]: https://github.com/DataDog/puppet-datadog-agent/issues/490
+[#492]: https://github.com/DataDog/puppet-datadog-agent/issues/492
+[#493]: https://github.com/DataDog/puppet-datadog-agent/issues/493
+[#496]: https://github.com/DataDog/puppet-datadog-agent/issues/496
+[#498]: https://github.com/DataDog/puppet-datadog-agent/issues/498
+[#501]: https://github.com/DataDog/puppet-datadog-agent/issues/501
+[#502]: https://github.com/DataDog/puppet-datadog-agent/issues/502
+[#503]: https://github.com/DataDog/puppet-datadog-agent/issues/503
+[#504]: https://github.com/DataDog/puppet-datadog-agent/issues/504
+[#506]: https://github.com/DataDog/puppet-datadog-agent/issues/506
+[#507]: https://github.com/DataDog/puppet-datadog-agent/issues/507
+[#508]: https://github.com/DataDog/puppet-datadog-agent/issues/508
+[#513]: https://github.com/DataDog/puppet-datadog-agent/issues/513
+[#514]: https://github.com/DataDog/puppet-datadog-agent/issues/514
+[#515]: https://github.com/DataDog/puppet-datadog-agent/issues/515
+[#516]: https://github.com/DataDog/puppet-datadog-agent/issues/516
+[#519]: https://github.com/DataDog/puppet-datadog-agent/issues/519
+[#520]: https://github.com/DataDog/puppet-datadog-agent/issues/520
+[#521]: https://github.com/DataDog/puppet-datadog-agent/issues/521
+[#524]: https://github.com/DataDog/puppet-datadog-agent/issues/524
+[#525]: https://github.com/DataDog/puppet-datadog-agent/issues/525
+[#527]: https://github.com/DataDog/puppet-datadog-agent/issues/527
+[#528]: https://github.com/DataDog/puppet-datadog-agent/issues/528
+[#533]: https://github.com/DataDog/puppet-datadog-agent/issues/533
+[#534]: https://github.com/DataDog/puppet-datadog-agent/issues/534
+[#537]: https://github.com/DataDog/puppet-datadog-agent/issues/537
+[#544]: https://github.com/DataDog/puppet-datadog-agent/issues/544
+[#545]: https://github.com/DataDog/puppet-datadog-agent/issues/545
+[#548]: https://github.com/DataDog/puppet-datadog-agent/issues/548
+[#551]: https://github.com/DataDog/puppet-datadog-agent/issues/551
+[#555]: https://github.com/DataDog/puppet-datadog-agent/issues/555
+[#556]: https://github.com/DataDog/puppet-datadog-agent/issues/556
+[#557]: https://github.com/DataDog/puppet-datadog-agent/issues/557
+[#558]: https://github.com/DataDog/puppet-datadog-agent/issues/558
+[#562]: https://github.com/DataDog/puppet-datadog-agent/issues/562
+[#571]: https://github.com/DataDog/puppet-datadog-agent/issues/571
+[#572]: https://github.com/DataDog/puppet-datadog-agent/issues/572
+[#574]: https://github.com/DataDog/puppet-datadog-agent/issues/574
+[#576]: https://github.com/DataDog/puppet-datadog-agent/issues/576
+[#578]: https://github.com/DataDog/puppet-datadog-agent/issues/578
+[#581]: https://github.com/DataDog/puppet-datadog-agent/issues/581
+[#584]: https://github.com/DataDog/puppet-datadog-agent/issues/584
+[#587]: https://github.com/DataDog/puppet-datadog-agent/issues/587
+[#588]: https://github.com/DataDog/puppet-datadog-agent/issues/588
+[#591]: https://github.com/DataDog/puppet-datadog-agent/issues/591
+[#596]: https://github.com/DataDog/puppet-datadog-agent/issues/596
+[#597]: https://github.com/DataDog/puppet-datadog-agent/issues/597
+[#598]: https://github.com/DataDog/puppet-datadog-agent/issues/598
+[#599]: https://github.com/DataDog/puppet-datadog-agent/issues/599
+[@Aramack]: https://github.com/Aramack
 [@BIAndrews]: https://github.com/BIAndrews
 [@ColinHebert]: https://github.com/ColinHebert
+[@ColinHerbert]: https://github.com/ColinHerbert
 [@DDRBoxman]: https://github.com/DDRBoxman
 [@IanCrouch]: https://github.com/IanCrouch
 [@LeoCavaille]: https://github.com/LeoCavaille
@@ -414,13 +745,18 @@ Changes
 [@alexfouche]: https://github.com/alexfouche
 [@alexharv074]: https://github.com/alexharv074
 [@alvin-huang]: https://github.com/alvin-huang
+[@arkpoah]: https://github.com/arkpoah
+[@asenci]: https://github.com/asenci
+[@atayts]: https://github.com/atayts
 [@b2jrock]: https://github.com/b2jrock
 [@bflad]: https://github.com/bflad
 [@binford2k]: https://github.com/binford2k
 [@bit-herder]: https://github.com/bit-herder
 [@bittner]: https://github.com/bittner
 [@butangero]: https://github.com/butangero
+[@cabrinha]: https://github.com/cabrinha
 [@ckolos]: https://github.com/ckolos
+[@com6056]: https://github.com/com6056
 [@craigwatson]: https://github.com/craigwatson
 [@cristianjuve]: https://github.com/cristianjuve
 [@cwood]: https://github.com/cwood
@@ -429,38 +765,74 @@ Changes
 [@davidgibbons]: https://github.com/davidgibbons
 [@degemer]: https://github.com/degemer
 [@denmat]: https://github.com/denmat
+[@devinmatte]: https://github.com/devinmatte
+[@diogokiss]: https://github.com/diogokiss
+[@djova]: https://github.com/djova
+[@dorg-kanderson]: https://github.com/dorg-kanderson
+[@dpricha89]: https://github.com/dpricha89
+[@dschaaff]: https://github.com/dschaaff
 [@dzinek]: https://github.com/dzinek
 [@eddmann]: https://github.com/eddmann
+[@evansj]: https://github.com/evansj
+[@ewansteele]: https://github.com/ewansteele
+[@ffleming]: https://github.com/ffleming
+[@flyinbutrs]: https://github.com/flyinbutrs
 [@flyinprogrammer]: https://github.com/flyinprogrammer
+[@fr3nd]: https://github.com/fr3nd
+[@fwelschen]: https://github.com/fwelschen
 [@fzwart]: https://github.com/fzwart
 [@generica]: https://github.com/generica
+[@gotyaio]: https://github.com/gotyaio
 [@grubernaut]: https://github.com/grubernaut
 [@jacobbednarz]: https://github.com/jacobbednarz
+[@jadams-av]: https://github.com/jadams-av
 [@jameynelson]: https://github.com/jameynelson
 [@jangie]: https://github.com/jangie
+[@jcarr-sailthru]: https://github.com/jcarr-sailthru
 [@jdavisp3]: https://github.com/jdavisp3
 [@jensendw]: https://github.com/jensendw
 [@jfrost]: https://github.com/jfrost
 [@jniesen]: https://github.com/jniesen
+[@jubagarie]: https://github.com/jubagarie
+[@jvanbrunschot]: https://github.com/jvanbrunschot
+[@kevin-bowers]: https://github.com/kevin-bowers
 [@kitchen]: https://github.com/kitchen
 [@lowkeyshift]: https://github.com/lowkeyshift
 [@mcasper]: https://github.com/mcasper
+[@milescrabill]: https://github.com/milescrabill
 [@mraylu]: https://github.com/mraylu
 [@mrunkel-ut]: https://github.com/mrunkel-ut
 [@mtougeron]: https://github.com/mtougeron
 [@npaufler]: https://github.com/npaufler
+[@o0oxid]: https://github.com/o0oxid
 [@obi11235]: https://github.com/obi11235
 [@obowersa]: https://github.com/obowersa
+[@oshmyrko]: https://github.com/oshmyrko
 [@pabrahamsson]: https://github.com/pabrahamsson
+[@paulhamby]: https://github.com/paulhamby
 [@pid1]: https://github.com/pid1
+[@pulkitsethi]: https://github.com/pulkitsethi
+[@rmrf-run]: https://github.com/rmrf-run
 [@rooprob]: https://github.com/rooprob
+[@rothgar]: https://github.com/rothgar
 [@rtyler]: https://github.com/rtyler
 [@sambanks]: https://github.com/sambanks
+[@samueljamesmarshall]: https://github.com/samueljamesmarshall
 [@scottgeary]: https://github.com/scottgeary
 [@sethcleveland]: https://github.com/sethcleveland
+[@siebrand]: https://github.com/siebrand
+[@skiedude]: https://github.com/skiedude
+[@spectralblu]: https://github.com/spectralblu
 [@stamak]: https://github.com/stamak
 [@stantona]: https://github.com/stantona
 [@swwolf]: https://github.com/swwolf
 [@szponek]: https://github.com/szponek
 [@tdm4]: https://github.com/tdm4
+[@teintuc]: https://github.com/teintuc
+[@tommoyangn]: https://github.com/tommoyangn
+[@turnopil]: https://github.com/turnopil
 [@tuxinaut]: https://github.com/tuxinaut
+[@yrcjaya]: https://github.com/yrcjaya
+[@zabacad]: https://github.com/zabacad
+[@zickzackv]: https://github.com/zickzackv
+[@zoom-kris-anderson]: https://github.com/zoom-kris-anderson

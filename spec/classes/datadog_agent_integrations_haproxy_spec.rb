@@ -1,110 +1,122 @@
 require 'spec_helper'
 
 describe 'datadog_agent::integrations::haproxy' do
-  context 'supported agents - v5 and v6' do
-    agents = { '5' => false, '6' => true }
-    agents.each do |_, enabled|
-      let(:pre_condition) { "class {'::datadog_agent': agent6_enable => #{enabled}}" }
-      let(:facts) {{
-        operatingsystem: 'Ubuntu',
-        ipaddress: '1.2.3.4',
-      }}
-      if !enabled
-        let(:conf_dir) { '/etc/dd-agent/conf.d' }
-      else
-        let(:conf_dir) { '/etc/datadog-agent/conf.d' }
+  context 'supported agents' do
+    ALL_SUPPORTED_AGENTS.each do |agent_major_version|
+      let(:pre_condition) { "class {'::datadog_agent': agent_major_version => #{agent_major_version}}" }
+      let(:facts) do
+        {
+          ipaddress: '1.2.3.4',
+        }
       end
-      let(:dd_user) { 'dd-agent' }
-      let(:dd_group) { 'root' }
-      let(:dd_package) { 'datadog-agent' }
-      let(:dd_service) { 'datadog-agent' }
-      let(:conf_file) { "#{conf_dir}/haproxy.yaml" }
 
-      it { should compile.with_all_deps }
-      it { should contain_file(conf_file).with(
-        owner: dd_user,
-        group: dd_group,
-        mode: '0644',
-      )}
-      it { should contain_file(conf_file).that_requires("Package[#{dd_package}]") }
-      it { should contain_file(conf_file).that_notifies("Service[#{dd_service}]") }
+      if agent_major_version == 5
+        let(:conf_file) { '/etc/dd-agent/conf.d/haproxy.yaml' }
+      else
+        let(:conf_file) { "#{CONF_DIR}/haproxy.d/conf.yaml" }
+      end
+
+      it { is_expected.to compile.with_all_deps }
+      it {
+        is_expected.to contain_file(conf_file).with(
+          owner: DD_USER,
+          group: DD_GROUP,
+          mode: PERMISSIONS_FILE,
+        )
+      }
+      it { is_expected.to contain_file(conf_file).that_requires("Package[#{PACKAGE_NAME}]") }
+      it { is_expected.to contain_file(conf_file).that_notifies("Service[#{SERVICE_NAME}]") }
 
       context 'with default parameters' do
-        it { should contain_file(conf_file).with_content(%r{url: http://1.2.3.4:8080}) }
-        it { should contain_file(conf_file).without_content(%r{username: }) }
-        it { should contain_file(conf_file).without_content(%r{password: }) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{url: http://1.2.3.4:8080}) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{username: }) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{password: }) }
       end
 
       context 'with url set' do
-        let(:params) {{
-          url: 'http://foo.bar:8421',
-        }}
-        it { should contain_file(conf_file).with_content(%r{url: http://foo.bar:8421}) }
+        let(:params) do
+          {
+            url: 'http://foo.bar:8421',
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{url: http://foo.bar:8421}) }
       end
 
       context 'with creds set correctly' do
-        let(:params) {{
-          creds: {
-            'username' => 'foo',
-            'password' => 'bar',
-          },
-        }}
-        it { should contain_file(conf_file).with_content(%r{username: foo}) }
-        it { should contain_file(conf_file).with_content(%r{password: bar}) }
+        let(:params) do
+          {
+            creds: {
+              'username' => 'foo',
+              'password' => 'bar',
+            },
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{username: foo}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{password: bar}) }
       end
 
       context 'with creds set incorrectly' do
-        let(:params) {{
-          'invalid' => 'is this real life',
-        }}
+        let(:params) do
+          {
+            'invalid' => 'is this real life',
+          }
+        end
 
         skip 'functionality not yet implemented' do
-          it { should contain_file(conf_file).without_content(/invalid: is this real life/) }
+          it { is_expected.to contain_file(conf_file).without_content(%r{invalid: is this real life}) }
         end
       end
 
       context 'with options set' do
-        let(:params) {{
-          options: {
-            'optionk' => 'optionv',
-          },
-        }}
-        it { should contain_file(conf_file).with_content(%r{optionk: optionv}) }
+        let(:params) do
+          {
+            options: {
+              'optionk' => 'optionv',
+            },
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{optionk: optionv}) }
       end
 
       context 'with instances set' do
-        let(:params) {{
-          instances: [
-            {
-              'url'     => 'http://foo.bar:8421',
-              'creds'   => {
-                'username' => 'foo',
-                'password' => 'bar',
+        let(:params) do
+          {
+            instances: [
+              {
+                'url'     => 'http://foo.bar:8421',
+                'creds'   => {
+                  'username' => 'foo',
+                  'password' => 'bar',
+                },
+                'options' => {
+                  'optionk1' => 'optionv1',
+                },
               },
-              'options' => {
-                'optionk1' => 'optionv1',
+              {
+                'url'     => 'http://shoe.baz:1248',
+                'creds'   => {
+                  'username' => 'shoe',
+                  'password' => 'baz',
+                },
+                'options' => {
+                  'optionk2' => 'optionv2',
+                },
               },
-            },
-            {
-              'url'     => 'http://shoe.baz:1248',
-              'creds'   => {
-                'username' => 'shoe',
-                'password' => 'baz',
-              },
-              'options' => {
-                'optionk2' => 'optionv2',
-              },
-            },
-          ]
-        }}
-        it { should contain_file(conf_file).with_content(%r{url: http://foo.bar:8421}) }
-        it { should contain_file(conf_file).with_content(%r{username: foo}) }
-        it { should contain_file(conf_file).with_content(%r{password: bar}) }
-        it { should contain_file(conf_file).with_content(%r{optionk1: optionv1}) }
-        it { should contain_file(conf_file).with_content(%r{url: http://shoe.baz:1248}) }
-        it { should contain_file(conf_file).with_content(%r{username: shoe}) }
-        it { should contain_file(conf_file).with_content(%r{password: baz}) }
-        it { should contain_file(conf_file).with_content(%r{optionk2: optionv2}) }
+            ],
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{url: http://foo.bar:8421}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{username: foo}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{password: bar}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{optionk1: optionv1}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{url: http://shoe.baz:1248}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{username: shoe}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{password: baz}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{optionk2: optionv2}) }
       end
     end
   end

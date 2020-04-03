@@ -1,96 +1,104 @@
 require 'spec_helper'
 
 describe 'datadog_agent::integrations::apache' do
-  context 'supported agents - v5 and v6' do
-    agents = { '5' => false, '6' => true }
-    agents.each do |_, enabled|
-      let(:pre_condition) { "class {'::datadog_agent': agent6_enable => #{enabled}}" }
-      let(:facts) {{
-        operatingsystem: 'Ubuntu',
-      }}
-      if !enabled
-        let(:conf_dir) { '/etc/dd-agent/conf.d' }
-      else
-        let(:conf_dir) { '/etc/datadog-agent/conf.d' }
-      end
-      let(:dd_user) { 'dd-agent' }
-      let(:dd_group) { 'root' }
-      let(:dd_package) { 'datadog-agent' }
-      let(:dd_service) { 'datadog-agent' }
-      let(:agent6_enable) { enabled }
-      let(:conf_file) { "#{conf_dir}/apache.yaml" }
-  
-      it { should compile.with_all_deps }
+  context 'supported agents' do
+    ALL_SUPPORTED_AGENTS.each do |agent_major_version|
+      let(:pre_condition) { "class {'::datadog_agent': agent_major_version => #{agent_major_version}}" }
 
-      it { should contain_class('datadog_agent') }
-      it { should contain_file(conf_file).with(
-        owner: dd_user,
-        group: dd_group,
-        mode: '0600',
-      )}
-      it { should contain_file(conf_file).that_requires("Package[#{dd_package}]") }
-      it { should contain_file(conf_file).that_notifies("Service[#{dd_service}]") }
-  
+      if agent_major_version == 5
+        let(:conf_file) { '/etc/dd-agent/conf.d/apache.yaml' }
+      else
+        let(:conf_file) { "#{CONF_DIR}/apache.d/conf.yaml" }
+      end
+
+      it { is_expected.to compile.with_all_deps }
+
+      it { is_expected.to contain_class('datadog_agent') }
+      it {
+        is_expected.to contain_file(conf_file).with(
+          owner: DD_USER,
+          group: DD_GROUP,
+          mode: PERMISSIONS_PROTECTED_FILE,
+        )
+      }
+      it { is_expected.to contain_file(conf_file).that_requires("Package[#{PACKAGE_NAME}]") }
+      it { is_expected.to contain_file(conf_file).that_notifies("Service[#{SERVICE_NAME}]") }
+
       context 'with default parameters' do
-        it { should contain_file(conf_file).with_content(%r{apache_status_url: http://localhost/server-status\?auto}) }
-        it { should contain_file(conf_file).without_content(/tags:/) }
-        it { should contain_file(conf_file).without_content(/apache_user:/) }
-        it { should contain_file(conf_file).without_content(/apache_password:/) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{apache_status_url: http://localhost/server-status\?auto}) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{tags:}) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{apache_user:}) }
+        it { is_expected.to contain_file(conf_file).without_content(%r{apache_password:}) }
       end
-  
+
       context 'with parameters set' do
-        let(:params) {{
-          url: 'http://foobar',
-          username: 'userfoo',
-          password: 'passfoo',
-          tags: %w{foo bar baz},
-        }}
-        it { should contain_file(conf_file).with_content(%r{apache_status_url: http://foobar}) }
-        it { should contain_file(conf_file).with_content(/apache_user: userfoo/) }
-        it { should contain_file(conf_file).with_content(/apache_password: passfoo/) }
+        let(:params) do
+          {
+            url: 'http://foobar',
+            username: 'userfoo',
+            password: 'passfoo',
+            tags: ['foo', 'bar', 'baz'],
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{apache_status_url: http://foobar}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{apache_user: userfoo}) }
+        it { is_expected.to contain_file(conf_file).with_content(%r{apache_password: passfoo}) }
       end
-  
+
       context 'with tags parameter single value' do
-        let(:params) {{
-          tags: 'foo',
-        }}
-        it { should_not compile }
-  
-        skip "this is currently unimplemented behavior" do
-          it { should contain_file(conf_file).with_content(/tags:\s+- foo\s*?[^-]/m) }
+        let(:params) do
+          {
+            tags: 'foo',
+          }
+        end
+
+        it { is_expected.not_to compile }
+
+        skip 'this is currently unimplemented behavior' do
+          it { is_expected.to contain_file(conf_file).with_content(%r{tags:\s+- foo\s*?[^-]}m) }
         end
       end
-  
+
       context 'with tags parameter array' do
-        let(:params) {{
-          tags: %w{ foo bar baz },
-        }}
-        it { should contain_file(conf_file).with_content(/tags:\s+- foo\s+- bar\s+- baz\s*?[^-]/m) }
+        let(:params) do
+          {
+            tags: ['foo', 'bar', 'baz'],
+          }
+        end
+
+        it { is_expected.to contain_file(conf_file).with_content(%r{tags:\s+- foo\s+- bar\s+- baz\s*?[^-]}m) }
       end
-  
+
       context 'with tags parameter empty values' do
         context 'mixed in with other tags' do
-          let(:params) {{
-            tags: [ 'foo', '', 'baz' ]
-          }}
-  
-          it { should contain_file(conf_file).with_content(/tags:\s+- foo\s+- baz\s*?[^-]/m) }
+          let(:params) do
+            {
+              tags: ['foo', '', 'baz'],
+            }
+          end
+
+          it { is_expected.to contain_file(conf_file).with_content(%r{tags:\s+- foo\s+- baz\s*?[^-]}m) }
         end
-  
+
         context 'single element array of an empty string' do
-          let(:params) {{
-            tags: [''],
-          }}
-  
-          skip("undefined behavior")
+          let(:params) do
+            {
+              tags: [''],
+            }
+          end
+
+          skip('undefined behavior')
         end
-  
+
         context 'single value empty string' do
-          let(:params) {{
-            tags: '',
-          }}
-  
-          skip("doubly undefined behavior")
+          let(:params) do
+            {
+              tags: '',
+            }
+          end
+
+          skip('doubly undefined behavior')
         end
       end
     end
